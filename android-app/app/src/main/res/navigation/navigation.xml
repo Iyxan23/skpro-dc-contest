@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/navigation"
+    app:startDestination="@id/mainFragment2">
+    <fragment
+        android:id="@+id/mainFragment2"
+        android:name="com.iyxan23.slice.ui.main.MainFragment"
+        android:label="MainFragment" >
+        <action
+            android:id="@+id/action_mainFragment2_to_controlFragment"
+            app:destination="@id/controlFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/controlFragment"
+        android:name="com.iyxan23.slice.ui.control.ControlFragment"
+        android:label="ControlFragment" />
+</navigation>
