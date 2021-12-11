@@ -1,0 +1,19 @@
+services:
+  # what nginx does here is, it proxies the backend and does the streaming thingies using nginx-rtmp-module
+  nginx:
+    image: tiangolo/nginx-rtmp
+    command: bash -c "mkdir -p /var/www/live && nginx -g \"daemon off;\""
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+      - "1935:1935" # the streaming server
+
+  backend:
+    image: rust:1-bullseye
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    command: cargo run 8080
+    expose:
+      - "8080"

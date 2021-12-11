@@ -1,9 +1,0 @@
-# we'll be using heroku's postgresql as our database
-setup:
-  addons:
-  - plan: heroku-postgresql
-    as: DATABASE
-
-build:
-  docker:
-    backend: backend/Dockerfile
