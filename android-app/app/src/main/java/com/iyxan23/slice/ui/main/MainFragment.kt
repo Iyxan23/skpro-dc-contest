@@ -34,6 +34,23 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         binding.buttonDispatchGestures.setOnClickListener {
             // check if our accessibility service is running
             if (isServiceEnabled(requireContext())) {
+                // post delayed for a bit
+                Handler(Looper.getMainLooper())
+                    .postDelayed({
+                        // we send out gestures to the service
+                        val gestures = ArrayList<SliceGestureMessage>()
+                        gestures.add(SliceGestureMessage.Hold(0, 1000))
+                        gestures.add(SliceGestureMessage.Move(1300, 1500, 1000L))
+                        gestures.add(SliceGestureMessage.Move(0, 0, 1000L))
+                        gestures.add(SliceGestureMessage.Release)
+
+                        // send out the gestures over to the service
+                        LocalBroadcastManager.getInstance(requireContext())
+                            .sendBroadcast(Intent().apply {
+                                action = DISPATCH_GESTURE_ACTION
+                                putExtra("gestures", gestures)
+                            })
+                    }, 500L)
             } else {
                 // ask the user to enable the accessibility service in the settings
                 AlertDialog.Builder(requireContext())
