@@ -14,6 +14,7 @@ import android.view.View
 import android.view.accessibility.AccessibilityManager
 import androidx.fragment.app.Fragment
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.navigation.fragment.findNavController
 import com.iyxan23.slice.R
 import com.iyxan23.slice.databinding.FragmentMainBinding
 import com.iyxan23.slice.domain.models.SliceGestureMessage
@@ -72,7 +73,8 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
 
         binding.buttonListenGestures.setOnClickListener {
-
+            findNavController()
+                .navigate(R.id.action_mainFragment2_to_controlFragment)
         }
     }
 
