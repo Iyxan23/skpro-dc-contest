@@ -14,14 +14,14 @@ import android.view.View
 import com.iyxan23.slice.domain.models.SliceGestureMessage
 
 /**
- * How many times should we sample (retrieve touch events) per second?
+ * How many times should we sample (retrieve move events) per second?
  *
  * 10 sample size = 10 samples per second
  *
  * The higher the number the smoother and more cpu-heavy it gets
  */
-const val touchSampleSize = 5
-const val touchSampleDelay = 1 / touchSampleSize
+const val touchSampleSize = 10
+const val touchSampleDelay = 1000f / touchSampleSize // <- ms
 
 /**
  * This custom view is used to display the RTMP video stream from remote and detect touch
@@ -38,16 +38,13 @@ class ControlSurface : View {
      *
      * MUST USE `SystemClock.uptimeMillis()`
      */
-    private var lastSample = 0
+    private var lastSample = SystemClock.uptimeMillis()
 
     private var curMessage: SliceGestureMessage? = null
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         if (event == null) return false
-
-        // check if we're allowed to sample (last sample was above the sample delay)
-        if (SystemClock.uptimeMillis() - lastSample < touchSampleDelay) return true
 
         return when (event.action) {
             MotionEvent.ACTION_DOWN -> {
@@ -58,12 +55,21 @@ class ControlSurface : View {
             }
 
             MotionEvent.ACTION_MOVE -> {
+                // check if we're allowed to sample (last sample was above the sample delay)
+                // move and up actions aren't delayed because they are important
+                if (SystemClock.uptimeMillis() - lastSample <= touchSampleDelay) {
+                    return true
+                }
+
+                lastSample = SystemClock.uptimeMillis()
+
                 Log.i(TAG, "onTouchEvent: move to x: ${event.rawX} y: ${event.rawY}")
                 curMessage = SliceGestureMessage.Move(
                     event.rawX.toInt(),
                     event.rawY.toInt(),
                     100L
                 )
+
                 invalidate()
                 true
             }
