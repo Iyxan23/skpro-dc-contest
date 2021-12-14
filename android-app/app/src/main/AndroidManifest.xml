@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.iyxan23.slice">
 
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+
     <application
         android:name=".App"
         android:allowBackup="true"
@@ -19,6 +21,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- a service used to dispatch gestures -->
         <service
             android:name="com.iyxan23.slice.domain.service.SliceGestureService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
@@ -30,6 +34,9 @@
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
         </service>
+
+        <!-- a service used to send out the screen to the other side and do communication stuff -->
+        <service android:name=".domain.service.RemoteControlService" />
     </application>
 
 </manifest>
