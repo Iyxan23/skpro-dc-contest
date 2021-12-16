@@ -10,8 +10,9 @@ import android.os.IBinder
 class RemoteControlService : Service() {
     companion object { private const val CHANNEL_ID = "SliceRemoteControlServiceChannel" }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val controller = intent!!.getStringExtra("controller_name")
+    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
+        val controller = intent.getStringExtra("controller_name")
+        val mediaProjectionToken = intent.getParcelableExtra<Intent>("media_projection_token")
 
         createNotificationChannel()
 

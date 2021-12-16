@@ -4,12 +4,10 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.Path
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
-import android.view.SurfaceView
 import android.view.View
 import com.iyxan23.slice.domain.models.SliceGestureMessage
 
@@ -67,7 +65,7 @@ class ControlSurface : View {
                 curMessage = SliceGestureMessage.Move(
                     event.rawX.toInt(),
                     event.rawY.toInt(),
-                    100L
+                    touchSampleDelay.toLong()
                 )
 
                 invalidate()

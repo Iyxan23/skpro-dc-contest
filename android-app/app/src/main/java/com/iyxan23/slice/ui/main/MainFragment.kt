@@ -1,24 +1,23 @@
 package com.iyxan23.slice.ui.main
 
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.media.projection.MediaProjectionManager
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.provider.Settings
-import android.util.Log
 import android.view.View
 import android.view.accessibility.AccessibilityManager
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.fragment.findNavController
 import com.iyxan23.slice.R
 import com.iyxan23.slice.databinding.FragmentMainBinding
-import com.iyxan23.slice.domain.models.SliceGestureMessage
-import com.iyxan23.slice.domain.service.DISPATCH_GESTURE_ACTION
+import com.iyxan23.slice.domain.service.RemoteControlService
 import com.iyxan23.slice.domain.service.SliceGestureService
 import com.zhuinden.fragmentviewbindingdelegatekt.viewBinding
 
@@ -32,26 +31,33 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     private val binding by viewBinding(FragmentMainBinding::bind)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        binding.buttonDispatchGestures.setOnClickListener {
+        binding.buttonRemote.setOnClickListener {
             // check if our accessibility service is running
             if (isServiceEnabled(requireContext())) {
-                // post delayed for a bit
-                Handler(Looper.getMainLooper())
-                    .postDelayed({
-                        // we send out gestures to the service
-                        val gestures = ArrayList<SliceGestureMessage>()
-                        gestures.add(SliceGestureMessage.Hold(0, 1000))
-                        gestures.add(SliceGestureMessage.Move(1300, 1500, 1000L))
-                        gestures.add(SliceGestureMessage.Move(0, 0, 1000L))
-                        gestures.add(SliceGestureMessage.Release)
+                // we're going to request for mediaprojection, then start the RemoteControlService
+                // with the mediaprojection token passed through to it
+                val mediaProjectionManager = requireActivity()
+                    .getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
 
-                        // send out the gestures over to the service
-                        LocalBroadcastManager.getInstance(requireContext())
-                            .sendBroadcast(Intent().apply {
-                                action = DISPATCH_GESTURE_ACTION
-                                putExtra("gestures", gestures)
-                            })
-                    }, 500L)
+                registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                    if (it.resultCode != Activity.RESULT_OK) {
+                        Toast.makeText(
+                            requireContext(),
+                            "We require the screen capture permission to be able to share your screen with the controller",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        return@registerForActivityResult
+                    }
+
+                    // we start the remote control service
+                    requireActivity().startForegroundService(
+                        Intent(requireActivity(), RemoteControlService::class.java).apply {
+                            putExtra("media_projection_token", it.data!!.clone() as Intent)
+                        }
+                    )
+                }.launch(mediaProjectionManager.createScreenCaptureIntent())
+
             } else {
                 // ask the user to enable the accessibility service in the settings
                 AlertDialog.Builder(requireContext())
@@ -72,7 +78,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             }
         }
 
-        binding.buttonListenGestures.setOnClickListener {
+        binding.buttonController.setOnClickListener {
             findNavController()
                 .navigate(R.id.action_mainFragment2_to_controlFragment)
         }
