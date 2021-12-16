@@ -9,12 +9,14 @@ import android.content.pm.ServiceInfo
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import android.view.View
 import android.view.accessibility.AccessibilityManager
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import com.iyxan23.slice.App
 import com.iyxan23.slice.R
 import com.iyxan23.slice.databinding.FragmentMainBinding
 import com.iyxan23.slice.domain.service.RemoteControlService
@@ -32,6 +34,8 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         binding.buttonRemote.setOnClickListener {
+            val app = requireActivity().application as App
+
             // check if our accessibility service is running
             if (isServiceEnabled(requireContext())) {
                 // we're going to request for mediaprojection, then start the RemoteControlService
@@ -48,6 +52,18 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                         ).show()
 
                         return@registerForActivityResult
+                    }
+
+                    // check if we've connected, if not then connect!
+                    if (!app.socket.connected()) {
+                        Log.d(TAG, "onViewCreated: Not connected, connecting")
+                        app.socket.connect()
+                        Log.d(TAG, "onViewCreated: Connected!")
+                    }
+
+                    // we're going to ask for the server to create a session
+                    app.socket.emit("create session", emptyArray()) {
+                        // todo
                     }
 
                     // we start the remote control service

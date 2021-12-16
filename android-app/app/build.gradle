@@ -59,6 +59,9 @@ dependencies {
         "libs/fragmentviewbindingdelegate-kt-1.0.0.aar"
     )
 
+    // socket.io go br
+    implementation 'io.socket:socket.io-client:2.0.0'
+
     testImplementation 'junit:junit:4.+'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
