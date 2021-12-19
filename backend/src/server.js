@@ -6,20 +6,47 @@ const supabase = require("@supabase/supabase-js").createClient(process.env.SUPAB
 let sockets = {}
 
 io.on('connection', socket => {
-  socket.on('create session', _ => {
-    const { data, err } =  await supabase
+  console.log('a socket has just connected');
+  socket.on('create session', async (_) => {
+    console.log('create a new session');
+
+    const session_id = generate_id(5);
+    const controller_token = generate_id(32);
+    const remote_token = generate_id(32);
+
+    // add this socket to our sockets list according to its id
+    sockets[remote_token] = socket
+
+    const { err } = await supabase
       .from('sessions')
-      .insert([/* todo */])
+      .insert([{'id': session_id, 'status': 'WAITING', 'controller_token': controller_token, 'remote_token': remote_token}]);
+
+    if (err) {
+      console.err(`err while inserting a new session row: ${err}`);
+      ack({'status': 'ERROR', 'message': err.toString()});
+    } else {
+      ack({'status': 'SUCCESS', 'token': remote_token, 'session_id': session_id});
+    }
   });
 });
 
+// remove a socket from our list if it disconnected
+io.on('disconnect', socket => {
+  for (const id in sockets) {
+    if (sockets[id] === socket) {
+      delete sockets[id];
+      // todo: also do something with the database
+      break;
+    }
+  }
+})
+
 function generate_id(length) {
-    var result           = '';
-    var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    var charactersLength = characters.length;
-    for ( var i = 0; i < length; i++ ) {
-      result += characters.charAt(Math.floor(Math.random() * 
- charactersLength));
-   }
+    let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < characters.length; i++) {
+      result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+
    return result;
 }
