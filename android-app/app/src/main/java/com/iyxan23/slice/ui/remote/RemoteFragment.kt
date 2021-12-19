@@ -45,7 +45,22 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
 
         // called when a controller is connecting to us!
         socket.on(SOCKET_EVENT_CONTROLLER_CONNECT) {
-            // todo
+            if (it[0] == null) {
+                Toast.makeText(requireContext(), "Server sent an invalid controller connect", Toast.LENGTH_SHORT).show()
+                Log.w(TAG, "onCreate: invalid controller connect: $it")
+                return@on
+            }
+
+            // show a confirmation if the user wanted to connect to this controller
+            AlertDialog.Builder(requireContext())
+                .setTitle("Connect")
+                .setMessage("A controller wanted to connect to your device, are you sure?")
+                .setPositiveButton("Yes") { dialog, _ ->
+                    // ok! check for media projection and start the remote control service
+                    startRemoteControl(it[0].toString())
+                }
+                .setNegativeButton("No") { dialog, _ -> dialog.dismiss() }
+                .create().show()
         }
     }
 
@@ -111,7 +126,7 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
     /**
      * Asks for media projection and kick-starts the remote control service
      */
-    private fun startRemoteControl() {
+    private fun startRemoteControl(controllerOffer: String) {
         // we're going to request for mediaprojection, then start the RemoteControlService
         // with the mediaprojection token passed through to it
         val mediaProjectionManager = requireActivity()
@@ -132,6 +147,7 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
             requireActivity().startForegroundService(
                 Intent(requireActivity(), RemoteControlService::class.java).apply {
                     putExtra("media_projection_token", it.data!!.clone() as Intent)
+                    putExtra("controller_offer", controllerOffer)
                 }
             )
         }.launch(mediaProjectionManager.createScreenCaptureIntent())
