@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "@supabase/supabase-js": "^1.28.5",
+    "dotenv": "^10.0.0",
     "socket.io": "^4.4.0"
   }
 }

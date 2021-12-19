@@ -1,9 +1,9 @@
-const io = require("socket.io")(process.env.PORT || 8080);
+const io = require('socket.io')(process.env.PORT || 8080);
+require('dotenv').config()
 
-import { createClient } from '@supabase/supabase-js'
-import { url, api_key } from './creds.json'
+const supabase = require("@supabase/supabase-js").createClient(process.env.SUPABASE_URL, process.env.SUPABASE_API_KEY)
 
-const supabase = createClient(url, api_key)
+let sockets = {}
 
 io.on('connection', socket => {
   socket.on('create session', _ => {
