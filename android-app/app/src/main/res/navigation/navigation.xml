@@ -10,9 +10,16 @@
         <action
             android:id="@+id/action_mainFragment2_to_controlFragment"
             app:destination="@id/controlFragment" />
+        <action
+            android:id="@+id/action_mainFragment2_to_remoteFragment"
+            app:destination="@id/remoteFragment" />
     </fragment>
     <fragment
         android:id="@+id/controlFragment"
         android:name="com.iyxan23.slice.ui.control.ControlFragment"
         android:label="ControlFragment" />
+    <fragment
+        android:id="@+id/remoteFragment"
+        android:name="com.iyxan23.slice.ui.remote.RemoteFragment"
+        android:label="RemoteFragment" />
 </navigation>

@@ -23,9 +23,9 @@ io.on('connection', socket => {
 
     if (err) {
       console.err(`err while inserting a new session row: ${err}`);
-      ack({'status': 'ERROR', 'message': err.toString()});
+      ack({'type': 'Error', 'message': err.toString()});
     } else {
-      ack({'status': 'SUCCESS', 'token': remote_token, 'session_id': session_id});
+      ack({'type': 'Success', 'token': remote_token, 'session_id': session_id});
     }
   });
 });
