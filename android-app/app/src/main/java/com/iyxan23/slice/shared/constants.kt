@@ -10,5 +10,6 @@ const val DEBUG_URL = "wss://10.0.2.2:8080"
 
 const val SOCKET_EVENT_CONTROLLER_CONNECT = "controller connect"
 const val SOCKET_EMIT_CREATE_SESSION = "create session"
+const val SOCKET_EVENT_CONNECT_SESSION = "connect session"
 
 val iceServers = listOf(PeerConnection.IceServer("stun:stun3.l.google.com:19302"))

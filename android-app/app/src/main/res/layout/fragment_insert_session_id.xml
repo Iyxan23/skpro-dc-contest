@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:animateLayoutChanges="true">
 
     <TextView
         android:id="@+id/textView"
@@ -26,11 +27,24 @@
         android:cursorVisible="false"
         android:maxLength="5"
         android:textIsSelectable="false"
+        android:inputType="number"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textView"
         app:pinAnimationType="none"
         app:pinLineColors="#787878"
         app:pinLineStroke="1dp" />
+
+    <TextView
+        style="@style/TextAppearance.MaterialComponents.Overline"
+        android:id="@+id/error_text"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="#FF0000"
+        android:text="Error"
+        app:layout_constraintStart_toStartOf="@+id/pinEntryEditText"
+        app:layout_constraintTop_toBottomOf="@+id/pinEntryEditText" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
