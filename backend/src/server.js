@@ -1,7 +1,16 @@
-const io = require('socket.io')(process.env.PORT || 8080);
+const express = require('express')
+const { createServer } = require('http');
+const { Server } = require('socket.io')
+
+const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, { /* options */ });
+
 require('dotenv').config()
 
-const supabase = require("@supabase/supabase-js").createClient(process.env.SUPABASE_URL, process.env.SUPABASE_API_KEY)
+const supabase =
+    require("@supabase/supabase-js")
+      .createClient(process.env.SUPABASE_URL, process.env.SUPABASE_API_KEY)
 
 io.on('connection', socket => {
   console.log('a socket has just connected');
@@ -51,6 +60,11 @@ io.on('connection', socket => {
   })
 });
 
+app.get('/', (req, res) => {
+  console.log('hello world!');
+  res.send('hello world!');
+})
+
 function generate_id(length, only_numbers) {
     let result = '';
     const characters = only_numbers ? '1234567890' : 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -60,3 +74,8 @@ function generate_id(length, only_numbers) {
 
    return result;
 }
+
+const PORT = process.env.PORT || 8080;
+
+console.log(`Starting to listen to ${PORT}`);
+httpServer.listen(PORT);
