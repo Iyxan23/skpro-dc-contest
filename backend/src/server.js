@@ -5,6 +5,8 @@ const supabase = require("@supabase/supabase-js").createClient(process.env.SUPAB
 
 io.on('connection', socket => {
   console.log('a socket has just connected');
+
+  // called when a remote wanted to create a new session
   socket.on('create session', async (_) => {
     console.log('create a new session');
 
@@ -15,19 +17,39 @@ io.on('connection', socket => {
     // put this socket to a room identified with its session id and its token
     socket.join(`${session_id}-${remote_token}`)
 
-    const { err } = await supabase
+    const { error } = await supabase
       .from('sessions')
       .insert([{'id': session_id, 'status': 'WAITING', 'controller_token': controller_token, 'remote_token': remote_token}]);
 
-    if (err) {
-      console.err(`err while inserting a new session row: ${err}`);
-      ack({'type': 'Error', 'message': err.toString()});
+    if (error) {
+      console.error(`err while inserting a new session row: ${error}`);
+
+      ack({'type': 'error', 'message': error.toString()});
     } else {
-      ack({'type': 'Success', 'token': remote_token, 'session_id': session_id});
+      ack({'type': 'success', 'token': remote_token, 'session_id': session_id});
     }
   });
-});
 
+  // called when a controller wanted to connect to a session
+  socket.on('connect session', async (session_id) => {
+    // check if the provided session id exists
+    const { data, error } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('id', session_id)
+    
+    // check if the data doesn't exist (invalid session id)
+    if (data === undefined) {
+      ack({'type': 'error', 'message': 'Invalid session ID'})
+    } else if (error) {
+      console.error(`err while searching for session id ${session_id}: ${error}`)
+
+      ack({'type': 'error', 'message': error.toString()})
+    } else {
+      ack({'type': 'success', 'token': data.controller_token})
+    }
+  })
+});
 
 function generate_id(length, only_numbers) {
     let result = '';
