@@ -9,7 +9,7 @@ import com.iyxan23.slice.App
 import com.iyxan23.slice.R
 import com.iyxan23.slice.databinding.FragmentInsertSessionIdBinding
 import com.iyxan23.slice.domain.models.response.ConnectSessionResponse
-import com.iyxan23.slice.shared.SOCKET_EVENT_CONNECT_SESSION
+import com.iyxan23.slice.shared.SOCKET_CONNECT_SESSION
 import com.zhuinden.fragmentviewbindingdelegatekt.viewBinding
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -31,7 +31,7 @@ class InsertSessionIDFragment : Fragment(R.layout.fragment_insert_session_id) {
         // when the user finished entering the session ID
         binding.pinEntryEditText.setOnPinEnteredListener { sessionId ->
             // then we ask the server if this session id exists
-            socket.emit(SOCKET_EVENT_CONNECT_SESSION, arrayOf(sessionId)) { ack ->
+            socket.emit(SOCKET_CONNECT_SESSION, arrayOf(sessionId)) { ack ->
                 if (ack[0] == null) {
                     Log.e(TAG, "onViewCreated: Server sent an invalid ack: $ack")
 

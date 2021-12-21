@@ -21,8 +21,8 @@ import com.iyxan23.slice.R
 import com.iyxan23.slice.databinding.FragmentRemoteBinding
 import com.iyxan23.slice.domain.models.response.CreateSessionResponse
 import com.iyxan23.slice.domain.service.RemoteControlService
-import com.iyxan23.slice.shared.SOCKET_EMIT_CREATE_SESSION
-import com.iyxan23.slice.shared.SOCKET_EVENT_CONTROLLER_CONNECT
+import com.iyxan23.slice.shared.SOCKET_CREATE_SESSION
+import com.iyxan23.slice.shared.SOCKET_CONTROLLER_CONNECT
 import com.iyxan23.slice.ui.main.TAG
 import com.zhuinden.fragmentviewbindingdelegatekt.viewBinding
 import kotlinx.serialization.decodeFromString
@@ -37,7 +37,7 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
         super.onCreate(savedInstanceState)
 
         // called when a controller is connecting to us!
-        socket.on(SOCKET_EVENT_CONTROLLER_CONNECT) {
+        socket.on(SOCKET_CONTROLLER_CONNECT) {
             if (it[0] == null) {
                 Toast.makeText(requireContext(), "Server sent an invalid controller connect", Toast.LENGTH_SHORT).show()
                 Log.w(TAG, "onCreate: invalid controller connect: $it")
@@ -61,7 +61,7 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
         super.onViewCreated(view, savedInstanceState)
 
         // we're going to ask for the server to create a session
-        socket.emit(SOCKET_EMIT_CREATE_SESSION, emptyArray()) { ack ->
+        socket.emit(SOCKET_CREATE_SESSION, emptyArray()) { ack ->
             if (ack[0] == null) {
                 showError("Server sent an invalid response, is the server we're connecting to valid?")
                 return@emit
@@ -102,7 +102,7 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
         super.onDestroy()
 
         // remove socket events that were previously defined in onCreate
-        socket.off(SOCKET_EVENT_CONTROLLER_CONNECT)
+        socket.off(SOCKET_CONTROLLER_CONNECT)
     }
 
     private fun showError(message: String) {
