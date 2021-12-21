@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import android.view.View
 import android.view.accessibility.AccessibilityManager
 import androidx.fragment.app.Fragment
@@ -16,7 +17,7 @@ import com.iyxan23.slice.R
 import com.iyxan23.slice.databinding.FragmentMainBinding
 import com.iyxan23.slice.domain.service.SliceGestureService
 import com.zhuinden.fragmentviewbindingdelegatekt.viewBinding
-import io.socket.client.Manager
+import io.socket.client.Socket
 
 const val TAG = "MainFragment"
 
@@ -33,11 +34,13 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
         // connect the socket if it hasn't been connected
         if (!socket.connected()) {
+            Log.d(TAG, "onCreate: socket isn't connected, connecting now")
             socket.connect()
         }
 
-        // and lift the loading screen when the socket has opened
-        socket.on(Manager.EVENT_OPEN) {
+        // and lift the loading screen when the socket has connected
+        socket.once(Socket.EVENT_CONNECT) {
+            Log.d(TAG, "onCreate: connected")
             // lift the loading screen
             binding.loadingOverlay.animate()
                 .alpha(0f)
@@ -45,6 +48,10 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 .withEndAction {
                     binding.loadingOverlay.visibility = View.GONE
                 }
+        }
+
+        socket.on(Socket.EVENT_CONNECT_ERROR) {
+            Log.w(TAG, "onCreate: failed to connect to socket ${it.asList()}")
         }
     }
 
