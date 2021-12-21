@@ -21,8 +21,8 @@ import com.iyxan23.slice.R
 import com.iyxan23.slice.databinding.FragmentRemoteBinding
 import com.iyxan23.slice.domain.models.response.CreateSessionResponse
 import com.iyxan23.slice.domain.service.RemoteControlService
-import com.iyxan23.slice.shared.SOCKET_CREATE_SESSION
 import com.iyxan23.slice.shared.SOCKET_CONTROLLER_CONNECT
+import com.iyxan23.slice.shared.SOCKET_CREATE_SESSION
 import com.iyxan23.slice.ui.main.TAG
 import com.zhuinden.fragmentviewbindingdelegatekt.viewBinding
 import kotlinx.serialization.decodeFromString
@@ -67,7 +67,7 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
                 return@emit
             }
 
-            when (val response = Json.decodeFromString<CreateSessionResponse>(ack.toString())) {
+            when (val response = Json.decodeFromString<CreateSessionResponse>(ack[0].toString())) {
                 is CreateSessionResponse.Success -> {
                     // success! show the session id to the user and store the token elsewhere
                     Handler(Looper.getMainLooper()).post {
