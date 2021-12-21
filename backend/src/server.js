@@ -10,9 +10,9 @@ io.on('connection', socket => {
   socket.on('create session', async (_) => {
     console.log('create a new session');
 
-    const session_id = generate_id(5);
-    const controller_token = generate_id(32);
-    const remote_token = generate_id(32);
+    const session_id = generate_id(5, true); // true: only generate numbers
+    const controller_token = generate_id(32, false); // false: generate characters and numbers
+    const remote_token = generate_id(32, false);
 
     // add this socket to our sockets list according to its id
     sockets[remote_token] = socket
@@ -41,10 +41,10 @@ io.on('disconnect', socket => {
   }
 })
 
-function generate_id(length) {
+function generate_id(length, only_numbers) {
     let result = '';
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    for (let i = 0; i < characters.length; i++) {
+    const characters = only_numbers ? '1234567890' : 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < length; i++) {
       result += characters.charAt(Math.floor(Math.random() * characters.length));
     }
 
