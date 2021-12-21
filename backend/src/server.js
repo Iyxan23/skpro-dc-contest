@@ -1,22 +1,22 @@
-const express = require('express')
 const { createServer } = require('http');
 const { Server } = require('socket.io')
 
-const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, { /* options */ });
-
 require('dotenv').config()
+
+const httpServer = createServer();
+const io = new Server(httpServer, { /* options */ });
 
 const supabase =
     require("@supabase/supabase-js")
       .createClient(process.env.SUPABASE_URL, process.env.SUPABASE_API_KEY)
 
+// Socket.IO fun stuff =================
+
 io.on('connection', socket => {
   console.log('a socket has just connected');
 
   // called when a remote wanted to create a new session
-  socket.on('create session', async (_) => {
+  socket.on('create session', async (ack) => {
     console.log('create a new session');
 
     const session_id = generate_id(5, true); // true: only generate numbers
@@ -40,7 +40,7 @@ io.on('connection', socket => {
   });
 
   // called when a controller wanted to connect to a session
-  socket.on('connect session', async (session_id) => {
+  socket.on('connect session', async (session_id, ack) => {
     // check if the provided session id exists
     const { data, error } = await supabase
       .from('sessions')
@@ -60,10 +60,9 @@ io.on('connection', socket => {
   })
 });
 
-app.get('/', (req, res) => {
-  console.log('hello world!');
-  res.send('hello world!');
-})
+io.on('disconnect', () => {
+  console.log('a socket just disconnected');
+});
 
 function generate_id(length, only_numbers) {
     let result = '';
