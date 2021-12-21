@@ -3,8 +3,6 @@ require('dotenv').config()
 
 const supabase = require("@supabase/supabase-js").createClient(process.env.SUPABASE_URL, process.env.SUPABASE_API_KEY)
 
-let sockets = {}
-
 io.on('connection', socket => {
   console.log('a socket has just connected');
   socket.on('create session', async (_) => {
@@ -14,8 +12,8 @@ io.on('connection', socket => {
     const controller_token = generate_id(32, false); // false: generate characters and numbers
     const remote_token = generate_id(32, false);
 
-    // add this socket to our sockets list according to its id
-    sockets[remote_token] = socket
+    // put this socket to a room identified with its session id and its token
+    socket.join(`${session_id}-${remote_token}`)
 
     const { err } = await supabase
       .from('sessions')
@@ -30,16 +28,6 @@ io.on('connection', socket => {
   });
 });
 
-// remove a socket from our list if it disconnected
-io.on('disconnect', socket => {
-  for (const id in sockets) {
-    if (sockets[id] === socket) {
-      delete sockets[id];
-      // todo: also do something with the database
-      break;
-    }
-  }
-})
 
 function generate_id(length, only_numbers) {
     let result = '';
