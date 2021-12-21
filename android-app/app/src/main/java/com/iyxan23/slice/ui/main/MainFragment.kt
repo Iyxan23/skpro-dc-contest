@@ -11,10 +11,12 @@ import android.view.View
 import android.view.accessibility.AccessibilityManager
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import com.iyxan23.slice.App
 import com.iyxan23.slice.R
 import com.iyxan23.slice.databinding.FragmentMainBinding
 import com.iyxan23.slice.domain.service.SliceGestureService
 import com.zhuinden.fragmentviewbindingdelegatekt.viewBinding
+import io.socket.client.Manager
 
 const val TAG = "MainFragment"
 
@@ -24,6 +26,27 @@ const val TAG = "MainFragment"
  */
 class MainFragment : Fragment(R.layout.fragment_main) {
     private val binding by viewBinding(FragmentMainBinding::bind)
+    private val socket by lazy { (requireActivity().application as App).socket }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // connect the socket if it hasn't been connected
+        if (!socket.connected()) {
+            socket.connect()
+        }
+
+        // and lift the loading screen when the socket has opened
+        socket.on(Manager.EVENT_OPEN) {
+            // lift the loading screen
+            binding.loadingOverlay.animate()
+                .alpha(0f)
+                .setDuration(300L)
+                .withEndAction {
+                    binding.loadingOverlay.visibility = View.GONE
+                }
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         binding.buttonRemote.setOnClickListener {

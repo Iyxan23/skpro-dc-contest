@@ -36,13 +36,6 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // check if we've connected, if not then connect!
-        if (!socket.connected()) {
-            Log.d(TAG, "onViewCreated: Not connected, connecting")
-            socket.connect()
-            Log.d(TAG, "onViewCreated: Connected!")
-        }
-
         // called when a controller is connecting to us!
         socket.on(SOCKET_EVENT_CONTROLLER_CONNECT) {
             if (it[0] == null) {
