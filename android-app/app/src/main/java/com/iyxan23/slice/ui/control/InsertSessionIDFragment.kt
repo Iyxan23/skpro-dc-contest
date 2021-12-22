@@ -34,6 +34,7 @@ class InsertSessionIDFragment : Fragment(R.layout.fragment_insert_session_id) {
         binding.pinEntryEditText.setOnPinEnteredListener { sessionId ->
             // reset the error text
             binding.errorText.visibility = View.GONE
+            binding.pinEntryEditText.isEnabled = false
 
             // then we ask the server if this session id exists
             // this utEmit function is an extension function that runs the ack in the ui  thread
@@ -72,6 +73,7 @@ class InsertSessionIDFragment : Fragment(R.layout.fragment_insert_session_id) {
                         // error
                         binding.errorText.text = response.message
                         binding.errorText.visibility = View.VISIBLE
+                        binding.pinEntryEditText.isEnabled = true // re-enable the pin entry
                     }
                 }
             }
