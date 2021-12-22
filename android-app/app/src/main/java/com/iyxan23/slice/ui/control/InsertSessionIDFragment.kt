@@ -53,9 +53,7 @@ class InsertSessionIDFragment : Fragment(R.layout.fragment_insert_session_id) {
                             .replace(
                                 R.id.fragment_control_root,
                                 RemoteControlFragment::class.java,
-                                Bundle().apply {
-                                    putString("token", response.token)
-                                }
+                                Bundle()
                             )
                             .commit()
                     }

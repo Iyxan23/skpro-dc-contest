@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 sealed class CreateSessionResponse {
     @Serializable
     @SerialName("success")
-    data class Success(val token: String, @SerialName("session_id") val sessionId: String) : CreateSessionResponse()
+    data class Success(@SerialName("session_id") val sessionId: String) : CreateSessionResponse()
 
     @Serializable
     @SerialName("error")

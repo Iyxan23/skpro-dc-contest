@@ -31,7 +31,6 @@ import kotlinx.serialization.json.Json
 class RemoteFragment : Fragment(R.layout.fragment_remote) {
     private val binding by viewBinding(FragmentRemoteBinding::bind)
     private val socket by lazy { (requireActivity().application as App).socket }
-    private val sharedPref by lazy { requireContext().getSharedPreferences("data", Context.MODE_PRIVATE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,7 +47,7 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
             AlertDialog.Builder(requireContext())
                 .setTitle("Connect")
                 .setMessage("A controller wanted to connect to your device, are you sure?")
-                .setPositiveButton("Yes") { dialog, _ ->
+                .setPositiveButton("Yes") { _, _ ->
                     // ok! check for media projection and start the remote control service
                     startRemoteControl(it[0].toString())
                 }
@@ -69,17 +68,11 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
 
             when (val response = Json.decodeFromString<CreateSessionResponse>(ack[0].toString())) {
                 is CreateSessionResponse.Success -> {
-                    // success! show the session id to the user and store the token elsewhere
+                    // success! show the session id to the user
                     Handler(Looper.getMainLooper()).post {
                         binding.sessionId.text = response.sessionId
                         binding.copySessionId.isEnabled = true
                     }
-
-                    // save the token to sharedpref because yes
-                    sharedPref
-                        .edit()
-                        .putString("token", response.token)
-                        .apply()
                 }
 
                 is CreateSessionResponse.Error -> {

@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 sealed class ConnectSessionResponse {
     @Serializable
     @SerialName("success")
-    data class Success(val token: String) : ConnectSessionResponse()
+    object Success : ConnectSessionResponse()
 
     @Serializable
     @SerialName("error")

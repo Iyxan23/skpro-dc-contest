@@ -21,7 +21,6 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
     companion object { private const val TAG = "RemoteControlFragment" }
 
     private val binding by viewBinding(FragmentRemoteControlBinding::bind)
-    private val token = requireArguments().getString("token")!!
     private val socket by lazy { (requireActivity().application as App).socket }
 
     private lateinit var connection: PeerConnection
@@ -85,8 +84,8 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
         // and finally we will generate the ICE for this device
         connection.createOffer(object : CreateSdpObserver {
             override fun onCreateSuccess(sdp: SessionDescription) {
-                // success! send that to the server! (and don't forget about the token)
-                socket.emit(SOCKET_SET_ICE, arrayOf(sdp.description, token))
+                // success! send that to the server!
+                socket.emit(SOCKET_SET_ICE, arrayOf(sdp.description))
             }
 
             override fun onCreateFailure(message: String) {
