@@ -16,6 +16,7 @@ import com.iyxan23.slice.App
 import com.iyxan23.slice.R
 import com.iyxan23.slice.databinding.FragmentMainBinding
 import com.iyxan23.slice.domain.service.SliceGestureService
+import com.iyxan23.slice.shared.utOnce
 import com.zhuinden.fragmentviewbindingdelegatekt.viewBinding
 import io.socket.client.Socket
 
@@ -39,7 +40,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
 
         // and lift the loading screen when the socket has connected
-        socket.once(Socket.EVENT_CONNECT) {
+        socket.utOnce(Socket.EVENT_CONNECT) {
             Log.d(TAG, "onCreate: connected")
             // lift the loading screen
             binding.loadingOverlay.animate()

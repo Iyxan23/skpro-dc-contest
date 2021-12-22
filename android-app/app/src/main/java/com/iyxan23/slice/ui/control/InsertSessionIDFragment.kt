@@ -11,6 +11,7 @@ import com.iyxan23.slice.databinding.FragmentInsertSessionIdBinding
 import com.iyxan23.slice.domain.models.response.GenericResponse
 import com.iyxan23.slice.shared.SOCKET_CONNECTION_CONFIRMED
 import com.iyxan23.slice.shared.SOCKET_CONNECT_SESSION
+import com.iyxan23.slice.shared.utEmit
 import com.zhuinden.fragmentviewbindingdelegatekt.viewBinding
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -35,7 +36,8 @@ class InsertSessionIDFragment : Fragment(R.layout.fragment_insert_session_id) {
             binding.errorText.visibility = View.GONE
 
             // then we ask the server if this session id exists
-            socket.emit(SOCKET_CONNECT_SESSION, arrayOf(sessionId)) { ack ->
+            // this utEmit function is an extension function that runs the ack in the ui  thread
+            socket.utEmit(SOCKET_CONNECT_SESSION, arrayOf(sessionId)) { ack ->
                 if (ack[0] == null) {
                     Log.e(TAG, "onViewCreated: Server sent an invalid ack: $ack")
 
@@ -45,7 +47,7 @@ class InsertSessionIDFragment : Fragment(R.layout.fragment_insert_session_id) {
                         Toast.LENGTH_SHORT
                     ).show()
 
-                    return@emit
+                    return@utEmit
                 }
 
                 // parse the response as it is a JSON

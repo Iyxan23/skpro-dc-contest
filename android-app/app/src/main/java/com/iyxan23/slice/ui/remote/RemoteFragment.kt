@@ -22,9 +22,7 @@ import com.iyxan23.slice.databinding.FragmentRemoteBinding
 import com.iyxan23.slice.domain.models.response.CreateSessionResponse
 import com.iyxan23.slice.domain.models.response.GenericResponse
 import com.iyxan23.slice.domain.service.RemoteControlService
-import com.iyxan23.slice.shared.SOCKET_CONFIRM_CONNECTION
-import com.iyxan23.slice.shared.SOCKET_CONTROLLER_CONNECT_CONFIRM
-import com.iyxan23.slice.shared.SOCKET_CREATE_SESSION
+import com.iyxan23.slice.shared.*
 import com.zhuinden.fragmentviewbindingdelegatekt.viewBinding
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -53,18 +51,18 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
 
         // called when a controller is trying to connect to us and the server is asking for a
         // confirmation
-        socket.once(SOCKET_CONTROLLER_CONNECT_CONFIRM) {
+        socket.utOnce(SOCKET_CONTROLLER_CONNECT_CONFIRM) {
             // show a confirmation if the user wanted to connect to this controller
             AlertDialog.Builder(requireContext())
                 .setTitle("Confirmation")
                 .setMessage("A controller is trying to connect to your device, confirm?")
                 .setPositiveButton("Yes") { dialog, _ ->
                     // good! we confirm the connection
-                    socket.emit(SOCKET_CONFIRM_CONNECTION, emptyArray()) {
+                    socket.utEmit(SOCKET_CONFIRM_CONNECTION, emptyArray()) {
                         if (it[0] == null) {
                             Log.e(TAG, "onCreate: invalid response to confirm connection: ${it.toList()}")
                             showError("Server sent an invalid response")
-                            return@emit
+                            return@utEmit
                         }
 
                         // check if this is successful
@@ -76,23 +74,20 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
 
                             is GenericResponse.Success -> {
                                 // nice! show that to the user
-                                Handler(Looper.getMainLooper()).post {
-                                    binding.connectionStatusText.text =
-                                        "Connection confirmed, waiting for the other peer"
-                                }
+                                binding.connectionStatusText.text =
+                                    "Connection confirmed, waiting for the other peer"
 
                                 // and listen for the `set ice` event
-                                socket.once("set ice", setIceEvent)
+                                socket.utOnce("set ice", setIceEvent)
                             }
                         }
                     }
 
                     // dismiss the dialog & show the connection status
                     dialog.dismiss()
-                    Handler(Looper.getMainLooper()).post {
-                        binding.connectionStatus.visibility = View.VISIBLE
-                        binding.connectionStatusText.text = "Confirming connection"
-                    }
+
+                    binding.connectionStatus.visibility = View.VISIBLE
+                    binding.connectionStatusText.text = "Confirming connection"
                 }
                 .setNegativeButton("No") { dialog, _ ->
                     // todo: implement cancelling confirmations
@@ -106,19 +101,17 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
         super.onViewCreated(view, savedInstanceState)
 
         // we're going to ask for the server to create a session
-        socket.emit(SOCKET_CREATE_SESSION, emptyArray()) { ack ->
+        socket.utEmit(SOCKET_CREATE_SESSION, emptyArray()) { ack ->
             if (ack[0] == null) {
                 showError("Server sent an invalid response, is the server we're connecting to valid?")
-                return@emit
+                return@utEmit
             }
 
             when (val response = Json.decodeFromString<CreateSessionResponse>(ack[0].toString())) {
                 is CreateSessionResponse.Success -> {
                     // success! show the session id to the user
-                    Handler(Looper.getMainLooper()).post {
-                        binding.sessionId.text = response.sessionId
-                        binding.copySessionId.isEnabled = true
-                    }
+                    binding.sessionId.text = response.sessionId
+                    binding.copySessionId.isEnabled = true
                 }
 
                 is CreateSessionResponse.Error -> {
@@ -146,6 +139,7 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
                 // go back to main fragment
                 findNavController().popBackStack()
             }
+            .create().show()
     }
 
     /**
