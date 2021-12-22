@@ -11,7 +11,6 @@ import com.iyxan23.slice.databinding.FragmentRemoteControlBinding
 import com.iyxan23.slice.shared.*
 import com.zhuinden.fragmentviewbindingdelegatekt.viewBinding
 import org.webrtc.*
-import java.nio.ByteBuffer
 
 /**
  * RemoteControlFragment is where the actual remote controlling happens
@@ -61,8 +60,7 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
                     }
 
                     DataChannel.State.OPEN -> {
-                        // send a ping!!
-                        dataChannel.send(DataChannel.Buffer(ByteBuffer.wrap("ping".toByteArray()), false))
+
                     }
 
                     DataChannel.State.CLOSING -> {

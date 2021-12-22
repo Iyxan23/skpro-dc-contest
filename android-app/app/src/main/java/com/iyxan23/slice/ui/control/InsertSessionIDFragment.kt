@@ -9,6 +9,7 @@ import com.iyxan23.slice.App
 import com.iyxan23.slice.R
 import com.iyxan23.slice.databinding.FragmentInsertSessionIdBinding
 import com.iyxan23.slice.domain.models.response.GenericResponse
+import com.iyxan23.slice.shared.SOCKET_CONNECTION_CONFIRMED
 import com.iyxan23.slice.shared.SOCKET_CONNECT_SESSION
 import com.zhuinden.fragmentviewbindingdelegatekt.viewBinding
 import kotlinx.serialization.decodeFromString
@@ -30,6 +31,9 @@ class InsertSessionIDFragment : Fragment(R.layout.fragment_insert_session_id) {
 
         // when the user finished entering the session ID
         binding.pinEntryEditText.setOnPinEnteredListener { sessionId ->
+            // reset the error text
+            binding.errorText.visibility = View.GONE
+
             // then we ask the server if this session id exists
             socket.emit(SOCKET_CONNECT_SESSION, arrayOf(sessionId)) { ack ->
                 if (ack[0] == null) {
@@ -47,15 +51,19 @@ class InsertSessionIDFragment : Fragment(R.layout.fragment_insert_session_id) {
                 // parse the response as it is a JSON
                 when (val response = Json.decodeFromString<GenericResponse>(ack[0].toString())) {
                     is GenericResponse.Success -> {
-                        // success! replace the fragment to the next fragment to do webrtc fun
-                        // stuff (and don't forget to pass the token)
-                        parentFragmentManager.beginTransaction()
-                            .replace(
-                                R.id.fragment_control_root,
-                                RemoteControlFragment::class.java,
-                                Bundle()
-                            )
-                            .commit()
+                        // success! we're going to wait for a confirmation from the remote
+                        socket.once(SOCKET_CONNECTION_CONFIRMED) {
+                            // confirmed! replace this current fragment to the remote control fragment
+                            parentFragmentManager.beginTransaction()
+                                .replace(
+                                    R.id.fragment_control_root,
+                                    RemoteControlFragment::class.java,
+                                    Bundle()
+                                )
+                                .commit()
+                        }
+
+                        binding.connectionStatusText.text = "Waiting for confirmation"
                     }
 
                     is GenericResponse.Error -> {
