@@ -37,6 +37,10 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         if (!socket.connected()) {
             Log.d(TAG, "onCreate: socket isn't connected, connecting now")
             socket.connect()
+        } else {
+            // sounds like the user is going back to here, since they've connected the socket before
+            // just remove the loading overlay
+            binding.loadingOverlay.visibility = View.GONE
         }
 
         // and lift the loading screen when the socket has connected
@@ -87,6 +91,15 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             findNavController()
                 .navigate(R.id.action_mainFragment2_to_controlFragment)
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        // there might be times where the user just quits the app while the app is still trying to
+        // connect to the server, and while the app is closed, the socket got connected and it tries
+        // to run the "lift loading screen" code but the app is closed
+        socket.off(Socket.EVENT_CONNECT)
     }
 
     /**
