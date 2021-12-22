@@ -18,6 +18,10 @@ const supabase =
 io.on('connection', socket => {
   console.log(`${socket.id} has just connected`);
 
+  socket.on('disconnect', () => {
+    console.log(`${socket.id} has just disconnected`)
+  })
+
   // called when a remote wanted to create a new session
   socket.on('create session', async (ack) => {
     console.log('create a new session');
@@ -44,13 +48,13 @@ io.on('connection', socket => {
   // called when a controller wanted to connect to a session
   socket.on('connect session', async (session_id, ack) => {
     // check if the provided session id exists
-    const { data, error: err1 } = await supabase
+    const { data: [data], error: err1 } = await supabase
       .from('sessions')
       .select('*')
       .eq('id', session_id)
     
     // check if the data doesn't exist (invalid session id)
-    if (data === undefined) {
+    if (!data) {
       ack({'type': 'error', 'message': 'Invalid session ID'})
       return
 
@@ -84,7 +88,7 @@ io.on('connection', socket => {
   socket.on('confirm connection', async (ack) => {
     // since this can only be called by a remote, we're going to find the session
     // this remote is in
-    const { data, error: err1 } = await supabase
+    const { data: [data], error: err1 } = await supabase
       .from('sessions')
       .select('*')
       .eq('remote_socket_id', socket.id)
@@ -115,7 +119,7 @@ io.on('connection', socket => {
     ack({'type': 'success'})
 
     // and put the controller socket to the room according to its session id
-    io.sockets.sockets.get(data.controller_socket_id).join(session_id)
+    io.sockets.sockets.get(data.controller_socket_id).join(data.id)
 
     // then tell the controller socket that the connection has been confirmed
     socket.to(data.controller_socket_id).emit('connection confirmed')
@@ -134,7 +138,7 @@ io.on('connection', socket => {
     const session_id = socket.rooms[1]
 
     // get the session data
-    const { data, error } = await supabase
+    const { data: [data], error } = await supabase
       .from('sessions')
       .select('*')
       .eq('id', session_id)
@@ -177,10 +181,6 @@ io.on('connection', socket => {
     // success!
     ack({'type': 'success'})
   })
-});
-
-io.on('disconnect', socket => {
-  console.log(`${socket.id} just disconnected`);
 });
 
 function generate_id(length) {
