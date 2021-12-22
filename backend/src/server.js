@@ -13,22 +13,17 @@ const supabase =
 // Socket.IO fun stuff =================
 
 io.on('connection', socket => {
-  console.log('a socket has just connected');
+  console.log(`${socket.id} has just connected`);
 
   // called when a remote wanted to create a new session
   socket.on('create session', async (ack) => {
     console.log('create a new session');
 
-    const session_id = generate_id(5, true); // true: only generate numbers
-    const controller_token = generate_id(32, false); // false: generate characters and numbers
-    const remote_token = generate_id(32, false);
-
-    // put this socket to a room identified with its session id and its token
-    socket.join(`${session_id}-${remote_token}`)
+    const session_id = generate_id(5);
 
     const { error } = await supabase
       .from('sessions')
-      .insert([{'id': session_id, 'status': 'WAITING', 'controller_token': controller_token, 'remote_token': remote_token}]);
+      .insert([{'id': session_id, 'remote_socket_id': socket.id}]);
 
     if (error) {
       console.error(`err while inserting a new session row: ${error}`);
@@ -50,23 +45,37 @@ io.on('connection', socket => {
     // check if the data doesn't exist (invalid session id)
     if (data === undefined) {
       ack({'type': 'error', 'message': 'Invalid session ID'})
+      return
+
     } else if (error) {
       console.error(`err while searching for session id ${session_id}: ${error}`)
 
       ack({'type': 'error', 'message': error.toString()})
-    } else {
-      ack({'type': 'success', 'token': data.controller_token})
+      return
     }
-  })
+
+    // it exists, we update the row to include this socket's id
+    const { error } = await supabase
+      .from('sessions')
+      .update({'controller_socket_id': socket.id})
+      .match({'id': session_id})
+
+    if (error) {
+      console.error(`err while updating controller_socket_id of ${session_id}: ${error}`)
+      ack({'type': 'error', 'message': error.toString})
+    } else {
+      ack({'type': 'success'})
+    }
+  });
 });
 
-io.on('disconnect', () => {
-  console.log('a socket just disconnected');
+io.on('disconnect', socket => {
+  console.log(`${socket.id} just disconnected`);
 });
 
-function generate_id(length, only_numbers) {
+function generate_id(length) {
     let result = '';
-    const characters = only_numbers ? '1234567890' : 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     for (let i = 0; i < length; i++) {
       result += characters.charAt(Math.floor(Math.random() * characters.length));
     }
