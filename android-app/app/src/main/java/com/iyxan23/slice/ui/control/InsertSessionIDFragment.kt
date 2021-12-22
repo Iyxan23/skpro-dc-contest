@@ -8,7 +8,7 @@ import androidx.fragment.app.Fragment
 import com.iyxan23.slice.App
 import com.iyxan23.slice.R
 import com.iyxan23.slice.databinding.FragmentInsertSessionIdBinding
-import com.iyxan23.slice.domain.models.response.ConnectSessionResponse
+import com.iyxan23.slice.domain.models.response.GenericResponse
 import com.iyxan23.slice.shared.SOCKET_CONNECT_SESSION
 import com.zhuinden.fragmentviewbindingdelegatekt.viewBinding
 import kotlinx.serialization.decodeFromString
@@ -45,8 +45,8 @@ class InsertSessionIDFragment : Fragment(R.layout.fragment_insert_session_id) {
                 }
 
                 // parse the response as it is a JSON
-                when (val response = Json.decodeFromString<ConnectSessionResponse>(ack[0].toString())) {
-                    is ConnectSessionResponse.Success -> {
+                when (val response = Json.decodeFromString<GenericResponse>(ack[0].toString())) {
+                    is GenericResponse.Success -> {
                         // success! replace the fragment to the next fragment to do webrtc fun
                         // stuff (and don't forget to pass the token)
                         parentFragmentManager.beginTransaction()
@@ -58,7 +58,7 @@ class InsertSessionIDFragment : Fragment(R.layout.fragment_insert_session_id) {
                             .commit()
                     }
 
-                    is ConnectSessionResponse.Error -> {
+                    is GenericResponse.Error -> {
                         // error
                         binding.errorText.text = response.message
                         binding.errorText.visibility = View.VISIBLE

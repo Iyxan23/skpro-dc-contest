@@ -4,12 +4,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-sealed class ConnectSessionResponse {
+sealed class GenericResponse {
     @Serializable
     @SerialName("success")
-    object Success : ConnectSessionResponse()
+    object Success : GenericResponse()
 
     @Serializable
     @SerialName("error")
-    data class Error(val message: String) : ConnectSessionResponse()
+    data class Error(val message: String) : GenericResponse()
 }

@@ -20,39 +20,82 @@ import com.iyxan23.slice.App
 import com.iyxan23.slice.R
 import com.iyxan23.slice.databinding.FragmentRemoteBinding
 import com.iyxan23.slice.domain.models.response.CreateSessionResponse
+import com.iyxan23.slice.domain.models.response.GenericResponse
 import com.iyxan23.slice.domain.service.RemoteControlService
-import com.iyxan23.slice.shared.SOCKET_CONTROLLER_CONNECT
+import com.iyxan23.slice.shared.SOCKET_CONFIRM_CONNECTION
+import com.iyxan23.slice.shared.SOCKET_CONTROLLER_CONNECT_CONFIRM
 import com.iyxan23.slice.shared.SOCKET_CREATE_SESSION
-import com.iyxan23.slice.ui.main.TAG
 import com.zhuinden.fragmentviewbindingdelegatekt.viewBinding
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 
 class RemoteFragment : Fragment(R.layout.fragment_remote) {
+    companion object { private const val TAG = "RemoteFragment" }
+
     private val binding by viewBinding(FragmentRemoteBinding::bind)
     private val socket by lazy { (requireActivity().application as App).socket }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // called when a controller is connecting to us!
-        socket.on(SOCKET_CONTROLLER_CONNECT) {
-            if (it[0] == null) {
-                Toast.makeText(requireContext(), "Server sent an invalid controller connect", Toast.LENGTH_SHORT).show()
-                Log.w(TAG, "onCreate: invalid controller connect: $it")
-                return@on
-            }
-
+        // called when a controller is trying to connect to us and the server is asking for a
+        // confirmation
+        socket.once(SOCKET_CONTROLLER_CONNECT_CONFIRM) {
             // show a confirmation if the user wanted to connect to this controller
             AlertDialog.Builder(requireContext())
-                .setTitle("Connect")
-                .setMessage("A controller wanted to connect to your device, are you sure?")
-                .setPositiveButton("Yes") { _, _ ->
-                    // ok! check for media projection and start the remote control service
-                    startRemoteControl(it[0].toString())
+                .setTitle("Confirmation")
+                .setMessage("A controller is trying to connect to your device, confirm?")
+                .setPositiveButton("Yes") { dialog, _ ->
+                    // good! we confirm the connection
+                    socket.emit(SOCKET_CONFIRM_CONNECTION, emptyArray()) {
+                        if (it[0] == null) {
+                            Log.e(TAG, "onCreate: invalid response to confirm connection: ${it.toList()}")
+                            showError("Server sent an invalid response")
+                            return@emit
+                        }
+
+                        // check if this is successful
+                        when (val response = Json.decodeFromString<GenericResponse>(it[0].toString())) {
+                            is GenericResponse.Error -> {
+                                Log.e(TAG, "onCreate: error on create session: ${response.message}", )
+                                showError(response.message)
+                            }
+
+                            is GenericResponse.Success -> {
+                                // nice! now we're going to wait for the `set ice` event
+                                Handler(Looper.getMainLooper()).post {
+                                    binding.connectionStatusText.text =
+                                        "Connection confirmed, waiting for the other peer"
+                                }
+                            }
+                        }
+                    }
+
+                    // dismiss the dialog & show the connection status
+                    dialog.dismiss()
+                    Handler(Looper.getMainLooper()).post {
+                        binding.connectionStatus.visibility = View.VISIBLE
+                        binding.connectionStatusText.text = "Confirming connection"
+                    }
                 }
-                .setNegativeButton("No") { dialog, _ -> dialog.dismiss() }
+                .setNegativeButton("No") { dialog, _ ->
+                    // todo: implement cancelling confirmations
+                    dialog.dismiss()
+                }
                 .create().show()
+        }
+
+        // called when we have confirmed the connection & the other peer is sending its ice
+        // which means we are ready to connect!!
+        socket.once("set ice") {
+            if (it[0] == null) {
+                Log.e(TAG, "onCreate: invalid event on set ice: ${it.toList()}")
+                showError("Server sent an invalid set ice event")
+                return@once
+            }
+
+            // now we got our offer at it[0], remote control go go go go brrrr
+            startRemoteControl(it[0].toString())
         }
     }
 
@@ -89,13 +132,6 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
 
             Toast.makeText(requireContext(), "Copied to clipboard", Toast.LENGTH_SHORT).show()
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-
-        // remove socket events that were previously defined in onCreate
-        socket.off(SOCKET_CONTROLLER_CONNECT)
     }
 
     private fun showError(message: String) {
