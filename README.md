@@ -1,2 +1,5 @@
-# skpro-dc-contest
-My submission to the Sketchware Pro discord server contest of making a TeamViewer-like android app
+# Slice
+A TeamViewer-like app for a contest in the Sketchware Pro Discord server
+
+### Diagram
+<img src="/diagram.png"/>
