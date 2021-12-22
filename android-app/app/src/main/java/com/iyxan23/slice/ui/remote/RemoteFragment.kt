@@ -38,6 +38,19 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // will get called when the other peer sent its ICE (offer) to us
+        val setIceEvent: (Array<Any?>) -> Unit = setIceEvent@{
+            // fixme: do i need to run this in the UI thread?
+            if (it[0] == null) {
+                Log.e(TAG, "onCreate: invalid event on set ice: ${it.toList()}")
+                showError("Server sent an invalid set ice event")
+                return@setIceEvent
+            }
+
+            // now we got our offer at it[0], remote control go go go go brrrr
+            startRemoteControl(it[0].toString())
+        }
+
         // called when a controller is trying to connect to us and the server is asking for a
         // confirmation
         socket.once(SOCKET_CONTROLLER_CONNECT_CONFIRM) {
@@ -62,11 +75,14 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
                             }
 
                             is GenericResponse.Success -> {
-                                // nice! now we're going to wait for the `set ice` event
+                                // nice! show that to the user
                                 Handler(Looper.getMainLooper()).post {
                                     binding.connectionStatusText.text =
                                         "Connection confirmed, waiting for the other peer"
                                 }
+
+                                // and listen for the `set ice` event
+                                socket.once("set ice", setIceEvent)
                             }
                         }
                     }
@@ -83,19 +99,6 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
                     dialog.dismiss()
                 }
                 .create().show()
-        }
-
-        // called when we have confirmed the connection & the other peer is sending its ice
-        // which means we are ready to connect!!
-        socket.once("set ice") {
-            if (it[0] == null) {
-                Log.e(TAG, "onCreate: invalid event on set ice: ${it.toList()}")
-                showError("Server sent an invalid set ice event")
-                return@once
-            }
-
-            // now we got our offer at it[0], remote control go go go go brrrr
-            startRemoteControl(it[0].toString())
         }
     }
 
