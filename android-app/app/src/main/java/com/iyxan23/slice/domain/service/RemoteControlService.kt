@@ -186,6 +186,7 @@ class RemoteControlService : Service() {
             Notification.Builder(this, CHANNEL_ID)
                 .setContentTitle("Slice Remote Control")
                 .setContentText(text)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .build()
         )
     }
