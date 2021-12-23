@@ -128,14 +128,14 @@ io.on('connection', socket => {
   // when this socket sets its ice
   socket.on('set ice', async (ice, ack) => {
 
-    // check if they have connected to any session yet
-    if (!socket.rooms[1]) {
+    // find the session id from the room the socket has joined before
+    const session_id = find_session_id_from_rooms(socket.rooms)
+
+    if (session_id == null) {
       // they haven't connected to any session yet!
       ack({'type': 'error', 'message': 'Has not connected to any session'})
       return
     }
-
-    const session_id = socket.rooms[1]
 
     // get the session data
     const { data: [data], error } = await supabase
@@ -191,6 +191,16 @@ function generate_id(length) {
     }
 
    return result;
+}
+
+function find_session_id_from_rooms(rooms) {
+  for (const room of rooms) {
+    if (room.length == 5 && room.match(/^\d+$/) != null) {
+      return room
+    }
+  }
+
+  return null
 }
 
 const PORT = process.env.PORT || 8080;
