@@ -7,9 +7,10 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.iyxan23.slice.App
 import com.iyxan23.slice.R
-import com.iyxan23.slice.databinding.FragmentRemoteControlBinding
+import com.iyxan23.slice.domain.models.response.GenericResponse
 import com.iyxan23.slice.shared.*
-import com.zhuinden.fragmentviewbindingdelegatekt.viewBinding
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import org.webrtc.*
 
 /**
@@ -19,7 +20,6 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
 
     companion object { private const val TAG = "RemoteControlFragment" }
 
-    private val binding by viewBinding(FragmentRemoteControlBinding::bind)
     private val socket by lazy { (requireActivity().application as App).socket }
     private lateinit var dataChannel: DataChannel
 
@@ -89,7 +89,23 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
         connection.createOffer(object : CreateSdpObserver {
             override fun onCreateSuccess(sdp: SessionDescription) {
                 // success! send that to the server!
-                socket.emit(SOCKET_SET_ICE, arrayOf(sdp.description))
+                Log.d(TAG, "onCreateSuccess: offer made: \"${sdp.description}\" sending that to the server")
+                socket.emit(SOCKET_SET_ICE, arrayOf(sdp.description)) {
+                    if (it[0] == null) {
+                        Log.e(TAG, "onCreateSuccess: Invalid ack for set ice: ${it.toList()}")
+                        return@emit
+                    }
+
+                    when (val response = Json.decodeFromString<GenericResponse>(it[0].toString())) {
+                        GenericResponse.Success -> {
+                            Log.d(TAG, "onCreateSuccess: success")
+                        }
+
+                        is GenericResponse.Error -> {
+                            Log.d(TAG, "onCreateSuccess: error: ${response.message}")
+                        }
+                    }
+                }
             }
 
             override fun onCreateFailure(message: String) {
@@ -107,7 +123,7 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
         })
 
         // we will be listening for the other side's ice
-        socket.on(SOCKET_SET_ICE) {
+        socket.utOnce(SOCKET_SET_ICE) {
             if (it[0] == null) {
                 Log.e(TAG, "onCreate: Invalid SET ICE event arg: $it")
 
@@ -117,7 +133,7 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
                     Toast.LENGTH_LONG
                 ).show()
 
-                return@on
+                return@utOnce
             }
 
             // oke, it[0] is the ICE (answer), set that as a remote description!
@@ -142,5 +158,11 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        socket.off(SOCKET_SET_ICE)
     }
 }
