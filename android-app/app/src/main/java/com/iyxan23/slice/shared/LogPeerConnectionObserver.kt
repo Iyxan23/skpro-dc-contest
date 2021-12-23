@@ -10,6 +10,18 @@ import org.webrtc.*
  * clutter in the peer connection code
  */
 abstract class LogPeerConnectionObserver(private val TAG: String) : PeerConnection.Observer {
+    override fun onStandardizedIceConnectionChange(newState: PeerConnection.IceConnectionState?) {
+        Log.d(TAG, "onStandardizedIceConnectionChange() called with: newState = $newState")
+    }
+
+    override fun onConnectionChange(newState: PeerConnection.PeerConnectionState?) {
+        Log.d(TAG, "onConnectionChange() called with: newState = $newState")
+    }
+
+    override fun onTrack(transceiver: RtpTransceiver?) {
+        Log.d(TAG, "onTrack() called with: transceiver = $transceiver")
+    }
+
     override fun onSignalingChange(state: PeerConnection.SignalingState?) {
         Log.d(TAG, "onSignalingChange() called with: state = $state")
     }
