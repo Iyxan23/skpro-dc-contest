@@ -47,4 +47,11 @@ const val SOCKET_CONNECT_SESSION = "connect session"
 // emit: when we want to set our ice
 const val SOCKET_SET_ICE = "set ice"
 
-val iceServers = listOf(PeerConnection.IceServer("stun:stun3.l.google.com:19302"))
+// STUN and TURN servers
+val iceServers = listOf(
+    PeerConnection.IceServer("stun:stun.l.google.com:19302"),
+    PeerConnection.IceServer("stun:stun1.l.google.com:19302"),
+    PeerConnection.IceServer("stun:stun2.l.google.com:19302"),
+    PeerConnection.IceServer("stun:stun3.l.google.com:19302"),
+    PeerConnection.IceServer("stun:stun4.l.google.com:19302"),
+)
