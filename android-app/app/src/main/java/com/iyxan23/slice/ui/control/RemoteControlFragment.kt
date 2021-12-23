@@ -1,8 +1,9 @@
 package com.iyxan23.slice.ui.control
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
-import android.view.View
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.iyxan23.slice.App
@@ -38,10 +39,6 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
             .createPeerConnectionFactory()
 
         connection = factory.createPeerConnection(iceServers, object : LogPeerConnectionObserver(TAG) {
-            override fun onConnectionChange(newState: PeerConnection.PeerConnectionState?) {
-                super.onConnectionChange(newState)
-            }
-
             override fun onAddStream(stream: MediaStream?) {
                 stream!!
                 super.onAddStream(stream)
@@ -88,29 +85,49 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
         // and finally we will generate the ICE for this device
         connection.createOffer(object : CreateSdpObserver {
             override fun onCreateSuccess(sdp: SessionDescription) {
-                // success! send that to the server!
-                Log.d(TAG, "onCreateSuccess: offer made: \"${sdp.description}\" sending that to the server")
-                socket.emit(SOCKET_SET_ICE, arrayOf(sdp.description)) {
-                    if (it[0] == null) {
-                        Log.e(TAG, "onCreateSuccess: Invalid ack for set ice: ${it.toList()}")
-                        return@emit
+                // success! set this as our local description and send that to the server!
+                Log.d(TAG, "onCreateSuccess: offer made: \"${sdp.description}\", setting it as local sdp")
+
+                connection.setLocalDescription(object : SetSdpObserver {
+                    override fun onSetSuccess() {
+                        Log.d(TAG, "onSetSuccess: local sdp successfully set! sending it to the server")
+
+                        socket.emit(SOCKET_SET_ICE, arrayOf(sdp.description)) {
+                            if (it[0] == null) {
+                                Log.e(TAG, "onCreateSuccess: Invalid ack for set ice: ${it.toList()}")
+                                return@emit
+                            }
+
+                            when (val response = Json.decodeFromString<GenericResponse>(it[0].toString())) {
+                                GenericResponse.Success -> {
+                                    Log.d(TAG, "onCreateSuccess: success")
+                                }
+
+                                is GenericResponse.Error -> {
+                                    Log.d(TAG, "onCreateSuccess: error: ${response.message}")
+                                }
+                            }
+                        }
                     }
 
-                    when (val response = Json.decodeFromString<GenericResponse>(it[0].toString())) {
-                        GenericResponse.Success -> {
-                            Log.d(TAG, "onCreateSuccess: success")
-                        }
+                    override fun onSetFailure(p0: String?) {
+                        Log.d(TAG, "onSetFailure: failed to set: $p0")
 
-                        is GenericResponse.Error -> {
-                            Log.d(TAG, "onCreateSuccess: error: ${response.message}")
+                        Handler(Looper.getMainLooper()).post {
+                            Toast.makeText(
+                                requireContext(),
+                                "Failed to set offer as local SDP: $p0",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
-                }
+                }, sdp)
             }
 
             override fun onCreateFailure(message: String) {
                 // :(
                 Log.e(TAG, "onCreateFailure: $message")
+                Log.d(TAG, "onCreateFailure: state: ${connection.signalingState()}")
 
                 Toast.makeText(
                     requireContext(),
@@ -136,28 +153,30 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
                 return@utOnce
             }
 
+            Log.d(TAG, "onCreate: answer received: ${it[0].toString()}")
+
             // oke, it[0] is the ICE (answer), set that as a remote description!
             connection.setRemoteDescription(object : SetSdpObserver {
                 override fun onSetSuccess() {
-                    Log.d(TAG, "onSetSuccess: Connected!")
+                    Log.d(TAG, "onSetSuccess: set remote description!")
+                    Log.d(TAG, "onSetSuccess: signaling state: ${connection.signalingState()}")
+                    Log.d(TAG, "onSetSuccess: connection state: ${connection.connectionState()}")
                     // success!! we have connected!
                 }
 
                 override fun onSetFailure(message: String) {
                     Log.d(TAG, "onSetFailure() called with: message = $message")
 
-                    Toast.makeText(
-                        requireContext(),
-                        "Failed to set answer: $message",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    Handler(Looper.getMainLooper()).post {
+                        Toast.makeText(
+                            requireContext(),
+                            "Failed to set answer: $message",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 }
             }, SessionDescription(SessionDescription.Type.ANSWER, it[0].toString()))
         }
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
     }
 
     override fun onStop() {

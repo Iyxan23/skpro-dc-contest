@@ -6,20 +6,21 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import com.iyxan23.slice.App
-import com.iyxan23.slice.shared.LogPeerConnectionObserver
-import com.iyxan23.slice.shared.SetSdpObserver
-import com.iyxan23.slice.shared.iceServers
-import com.iyxan23.slice.shared.utEmit
+import com.iyxan23.slice.R
+import com.iyxan23.slice.shared.*
 import org.webrtc.*
 
 class RemoteControlService : Service() {
     companion object {
         private const val CHANNEL_ID = "SliceRemoteControlServiceChannel"
         private const val NOTIFICATION_ID = 1
+        private const val TAG = "RemoteControlService"
     }
 
     private lateinit var connection: PeerConnection
@@ -104,30 +105,49 @@ class RemoteControlService : Service() {
                 updateNotificationText("Connecting - Controller description set")
 
                 // create an answer to the offer and send it out to the server
-                connection.createAnswer(object : SdpObserver {
-                    override fun onSetSuccess() {}
-                    override fun onSetFailure(message: String) {}
-
+                connection.createAnswer(object : CreateSdpObserver {
                     override fun onCreateSuccess(sdp: SessionDescription) {
-                        // success! send that out to the server
+                        // success! set as our local description and send that out to the server
                         Log.d(TAG, "onCreateSuccess() called with: sdp = $sdp")
 
-                        socket.utEmit("set ice", arrayOf(sdp.description)) {
-                            updateNotificationText("Connecting - ICE sent, waiting for a connection from the controller")
-                        }
+                        connection.setLocalDescription(object : SetSdpObserver {
+                            override fun onSetSuccess() {
+                                Log.d(TAG, "onSetSuccess() called, sending answer to the server")
+
+                                socket.utEmit("set ice", arrayOf(sdp.description)) {
+                                    updateNotificationText(
+                                        "Connecting - Answer sent, waiting for a connection from the controller"
+                                    )
+                                }
+                            }
+
+                            override fun onSetFailure(p0: String?) {
+                                Log.d(TAG, "onSetFailure() called with: p0 = $p0")
+
+                                Handler(Looper.getMainLooper()).post {
+                                    Toast.makeText(
+                                        this@RemoteControlService,
+                                        "Failed to set answer as local sdp: $p0",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        }, sdp)
                     }
 
                     override fun onCreateFailure(message: String) {
                         // failed to create an answer
                         Log.d(TAG, "onCreateFailure() called with: message = $message")
 
-                        Toast.makeText(
-                            applicationContext,
-                            "Failed to create an SDP answer: $message",
-                            Toast.LENGTH_LONG
-                        ).show()
+                        Handler(Looper.getMainLooper()).post {
+                            Toast.makeText(
+                                applicationContext,
+                                "Failed to create an SDP answer: $message",
+                                Toast.LENGTH_LONG
+                            ).show()
 
-                        stopForeground(true)
+                            stopForeground(true)
+                        }
                     }
                 }, MediaConstraints().apply {
                     mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveVideo", "true"))
