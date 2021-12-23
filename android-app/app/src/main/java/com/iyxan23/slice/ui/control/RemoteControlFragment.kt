@@ -21,6 +21,7 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
 
     private val binding by viewBinding(FragmentRemoteControlBinding::bind)
     private val socket by lazy { (requireActivity().application as App).socket }
+    private lateinit var dataChannel: DataChannel
 
     private lateinit var connection: PeerConnection
 
@@ -32,19 +33,24 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
 
         // we need to generate ICE of this device so we can connect to the host (remote in slice)
         // but first we will need to create the peer connection
-        connection = PeerConnectionFactory(PeerConnectionFactory.Options().apply {
-            disableEncryption = false
-        }).createPeerConnection(iceServers, MediaConstraints().apply {
-            mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveVideo", "true"))
-        }, object : LogPeerConnectionObserver(TAG) {
-            override fun onAddStream(stream: MediaStream?) {
-                super.onAddStream(stream)
-                TODO("when the other side starts streaming their screen")
+        val factory = PeerConnectionFactory.builder()
+            .setOptions(PeerConnectionFactory.Options().apply { disableEncryption = false })
+            .createPeerConnectionFactory()
+
+        connection = factory.createPeerConnection(iceServers, object : LogPeerConnectionObserver(TAG) {
+            override fun onConnectionChange(newState: PeerConnection.PeerConnectionState?) {
+                super.onConnectionChange(newState)
             }
-        })
+
+            override fun onAddStream(stream: MediaStream?) {
+                stream!!
+                super.onAddStream(stream)
+                TODO("instantiate the control surface and display this stream to it")
+            }
+        })!!
 
         // the data channel we will use to send gestures
-        val dataChannel = connection.createDataChannel("channel", DataChannel.Init())
+        dataChannel = connection.createDataChannel("channel", DataChannel.Init())
         dataChannel.registerObserver(object : DataChannel.Observer {
             override fun onBufferedAmountChange(amount: Long) {
                 Log.d(TAG, "onBufferedAmountChange() called with: amount = $amount")

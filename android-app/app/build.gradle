@@ -68,7 +68,7 @@ dependencies {
     }
 
     // webrtc go brr
-    implementation 'org.whispersystems:webrtc-android:M59'
+    implementation 'org.whispersystems:webrtc-android:M77'
 
     // https://github.com/alphamu/PinEntryEditText
     // for the Session ID insertion

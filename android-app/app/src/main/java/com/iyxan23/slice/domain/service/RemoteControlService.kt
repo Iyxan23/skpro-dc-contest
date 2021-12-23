@@ -10,7 +10,10 @@ import android.os.IBinder
 import android.util.Log
 import android.widget.Toast
 import com.iyxan23.slice.App
+import com.iyxan23.slice.shared.LogPeerConnectionObserver
+import com.iyxan23.slice.shared.SetSdpObserver
 import com.iyxan23.slice.shared.iceServers
+import com.iyxan23.slice.shared.utEmit
 import org.webrtc.*
 
 class RemoteControlService : Service() {
@@ -20,13 +23,17 @@ class RemoteControlService : Service() {
     }
 
     private lateinit var connection: PeerConnection
+    private lateinit var screenVideoTrack: VideoTrack
+    private lateinit var screenVideoSource: VideoSource
     private val socket by lazy { (application as App).socket }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         socket // to retrieve the socket
 
-        val offer = intent.getStringExtra("controller_offer")
-        val mediaProjectionToken = intent.getParcelableExtra<Intent>("media_projection_token")
+        val offer = intent.getStringExtra("controller_offer")!!
+        val mediaProjectionToken = intent.getParcelableExtra<Intent>("media_projection_token")!!
+
+        Log.d(TAG, "onStartCommand: Service started with offer: $offer")
 
         createNotificationChannel()
 
@@ -37,90 +44,59 @@ class RemoteControlService : Service() {
 
         startForeground(NOTIFICATION_ID, notification)
 
-        // initialize WebRTC things
-        // (warning: there are an abundance of existential crisis comments, please watch out)
+        // do WebRTC things
 
         // my gosh google's webrtc lib is so trash, i can't even find any documentation online
         // NOT A SINGLE BIT, except for the source code
-        connection = PeerConnectionFactory(PeerConnectionFactory.Options().apply {
-            disableEncryption = false
-        }).createPeerConnection(iceServers, MediaConstraints().apply {
-            // WTF IS THIS GOOGLE??!?!? WHY DO I NEED TO HARDCODE THE STRING AND WHY DON'T YOU JUST
-            // CREATE AN ENUM TO LIST THEM ALL
-            mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveVideo", "true"))
-        }, object : PeerConnection.Observer {
-            // AND THIS!!??!?!?! WHY DO YOU NEED TO MAKE THEM ALL MANDATORY!?!? IT JUST ADDS A LOT
-            // OF STUPID UNNEEDED HANDLERS, WHY NOT JUST MAKE IT LIKE JAVASCRIPT????!? `onIceCandidate`!?!??!
-            override fun onSignalingChange(state: PeerConnection.SignalingState?) {
-                Log.d(TAG, "onSignalingChange() called with: p0 = $state")
-            }
-            override fun onIceConnectionChange(state: PeerConnection.IceConnectionState?) {
-                Log.d(TAG, "onIceConnectionChange() called with: state = $state")
-            }
-            override fun onIceConnectionReceivingChange(receiving: Boolean) {
-                Log.d(TAG, "onIceConnectionReceivingChange() called with: receiving = $receiving")
-            }
-            override fun onIceGatheringChange(state: PeerConnection.IceGatheringState?) {
-                Log.d(TAG, "onIceGatheringChange() called with: state = $state")
-            }
-            override fun onIceCandidate(candidate: IceCandidate?) {
-                Log.d(TAG, "onIceCandidate() called with: candidate = $candidate")
-            }
-            override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {
-                Log.d(TAG, "onIceCandidatesRemoved() called with: candidates = $candidates")
-            }
-            override fun onAddStream(stream: MediaStream?) {
-                Log.d(TAG, "onAddStream() called with: stream = $stream")
-            }
-            override fun onRemoveStream(stream: MediaStream?) {
-                Log.d(TAG, "onRemoveStream() called with: stream = $stream")
-            }
-            override fun onDataChannel(channel: DataChannel) {
-                Log.d(TAG, "onDataChannel() called with: channel = $channel")
+        val factory = PeerConnectionFactory.builder()
+            .setOptions(PeerConnectionFactory.Options().apply { disableEncryption = false })
+            .createPeerConnectionFactory()
 
-                channel.registerObserver(object : DataChannel.Observer {
-                    override fun onBufferedAmountChange(p0: Long) {
-                        Log.d(TAG, "onBufferedAmountChange() called with: p0 = $p0")
-                    }
+        connection = factory
+            .createPeerConnection(iceServers, object : LogPeerConnectionObserver(TAG) {
+                override fun onDataChannel(channel: DataChannel?) {
+                    channel!!
+                    Log.d(TAG, "onDataChannel() called with: channel = $channel")
+                    Log.d(TAG, "onDataChannel: connected!")
 
-                    override fun onStateChange() {
-                        // todo
-                        when (channel.state()!!) {
-                            DataChannel.State.CONNECTING -> {
-                                Log.d(TAG, "onStateChange: connecting")
-                            }
-                            DataChannel.State.OPEN -> {
-                                Log.d(TAG, "onStateChange: open")
-                            }
-                            DataChannel.State.CLOSING -> {
-                                Log.d(TAG, "onStateChange: closing")
-                            }
-                            DataChannel.State.CLOSED -> {
-                                Log.d(TAG, "onStateChange: closed")
+                    channel.registerObserver(object : DataChannel.Observer {
+                        override fun onBufferedAmountChange(p0: Long) {
+                            Log.d(TAG, "onBufferedAmountChange() called with: p0 = $p0")
+                        }
+
+                        override fun onStateChange() {
+                            // todo
+                            when (channel.state()!!) {
+                                DataChannel.State.CONNECTING -> {
+                                    Log.d(TAG, "onStateChange: connecting")
+                                }
+                                DataChannel.State.OPEN -> {
+                                    Log.d(TAG, "onStateChange: open")
+                                }
+                                DataChannel.State.CLOSING -> {
+                                    Log.d(TAG, "onStateChange: closing")
+                                }
+                                DataChannel.State.CLOSED -> {
+                                    Log.d(TAG, "onStateChange: closed")
+                                }
                             }
                         }
-                    }
 
-                    override fun onMessage(message: DataChannel.Buffer) {
-                        Log.d(TAG, "onMessage() called with: message = $message")
-                        // todo
-                    }
-                })
-            }
-            override fun onRenegotiationNeeded() {
-                Log.d(TAG, "onRenegotiationNeeded() called")
-            }
-            override fun onAddTrack(receiver: RtpReceiver?, streams: Array<out MediaStream>?) {
-                Log.d(TAG, "onAddTrack() called with: receiver = $receiver, streams = $streams")
-            }
-        })!!
+                        override fun onMessage(message: DataChannel.Buffer) {
+                            Log.d(TAG, "onMessage() called with: message = $message")
+                            // todo
+                        }
+                    })
+                }
+            })!!
+
+        // create the video source and add it to the connection
+        screenVideoSource = factory.createVideoSource(true)
+        screenVideoTrack = factory.createVideoTrack("screen", screenVideoSource)
+        connection.addTrack(screenVideoTrack)
 
         // sets the remote description
-        connection.setRemoteDescription(object : SdpObserver {
-            // AGAIN!?!?!?? WHY NOT JUST SEPARATE FOR SETTING AND CREATING SDPS ON DIFFERENT INTERFACES!?!?!?!
-            override fun onCreateSuccess(description: SessionDescription?) {}
-            override fun onCreateFailure(message: String) {}
-
+        connection.setRemoteDescription(object : SetSdpObserver {
             override fun onSetSuccess() {
                 // success!
                 Log.d(TAG, "onSetSuccess() called")
@@ -136,7 +112,7 @@ class RemoteControlService : Service() {
                         // success! send that out to the server
                         Log.d(TAG, "onCreateSuccess() called with: sdp = $sdp")
 
-                        socket.emit("set ice", arrayOf(sdp.description)) {
+                        socket.utEmit("set ice", arrayOf(sdp.description)) {
                             updateNotificationText("Connecting - ICE sent, waiting for a connection from the controller")
                         }
                     }
