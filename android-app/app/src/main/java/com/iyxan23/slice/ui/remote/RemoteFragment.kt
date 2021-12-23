@@ -13,6 +13,7 @@ import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -32,21 +33,25 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
 
     private val binding by viewBinding(FragmentRemoteBinding::bind)
     private val socket by lazy { (requireActivity().application as App).socket }
+    private lateinit var askMediaProjection: ActivityResultLauncher<Intent>
+    private lateinit var offer: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         // will get called when the other peer sent its ICE (offer) to us
         val setIceEvent: (Array<Any?>) -> Unit = setIceEvent@{
-            // fixme: do i need to run this in the UI thread?
             if (it[0] == null) {
                 Log.e(TAG, "onCreate: invalid event on set ice: ${it.toList()}")
                 showError("Server sent an invalid set ice event")
                 return@setIceEvent
             }
 
-            // now we got our offer at it[0], remote control go go go go brrrr
-            startRemoteControl(it[0].toString())
+            Log.d(TAG, "onCreate: offer received: ${it[0].toString()}")
+
+            // now we got our offer at it[0], remote control go brr
+            offer = it[0].toString()
+            startRemoteControl()
         }
 
         // called when a controller is trying to connect to us and the server is asking for a
@@ -94,6 +99,29 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
                     dialog.dismiss()
                 }
                 .create().show()
+        }
+
+        // this will get called on startRemoteControl
+        askMediaProjection = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (it.resultCode != Activity.RESULT_OK) {
+                Toast.makeText(
+                    requireContext(),
+                    "We require the screen capture permission to be able to share your screen with the controller",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                return@registerForActivityResult
+            }
+
+            Log.d(TAG, "startRemoteControl: starting the service")
+
+            // we start the remote control service
+            requireActivity().startForegroundService(
+                Intent(requireActivity(), RemoteControlService::class.java).apply {
+                    putExtra("media_projection_token", it.data!!.clone() as Intent)
+                    putExtra("controller_offer", offer)
+                }
+            )
         }
     }
 
@@ -145,30 +173,12 @@ class RemoteFragment : Fragment(R.layout.fragment_remote) {
     /**
      * Asks for media projection and kick-starts the remote control service
      */
-    private fun startRemoteControl(controllerOffer: String) {
+    private fun startRemoteControl() {
         // we're going to request for mediaprojection, then start the RemoteControlService
         // with the mediaprojection token passed through to it
         val mediaProjectionManager = requireActivity()
             .getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
 
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            if (it.resultCode != Activity.RESULT_OK) {
-                Toast.makeText(
-                    requireContext(),
-                    "We require the screen capture permission to be able to share your screen with the controller",
-                    Toast.LENGTH_SHORT
-                ).show()
-
-                return@registerForActivityResult
-            }
-
-            // we start the remote control service
-            requireActivity().startForegroundService(
-                Intent(requireActivity(), RemoteControlService::class.java).apply {
-                    putExtra("media_projection_token", it.data!!.clone() as Intent)
-                    putExtra("controller_offer", controllerOffer)
-                }
-            )
-        }.launch(mediaProjectionManager.createScreenCaptureIntent())
+        askMediaProjection.launch(mediaProjectionManager.createScreenCaptureIntent())
     }
 }
