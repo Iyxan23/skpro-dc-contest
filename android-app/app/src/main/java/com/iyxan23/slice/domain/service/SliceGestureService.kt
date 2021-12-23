@@ -7,14 +7,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Path
-import android.os.Parcel
-import android.os.Parcelable
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.iyxan23.slice.domain.models.SliceGestureMessage
 
-const val TAG = "SliceGestureService"
 const val DISPATCH_GESTURE_ACTION = "slice_dispatch_gesture"
 
 /**
@@ -28,6 +25,8 @@ const val DISPATCH_GESTURE_ACTION = "slice_dispatch_gesture"
  * Source: https://stackoverflow.com/questions/59278085/how-perform-a-drag-based-in-x-y-mouse-coordinates-on-android-using-accessibili
  */
 class SliceGestureService : AccessibilityService() {
+    companion object { private const val TAG = "SliceGestureService" }
+
     inner class SliceBroadcastReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             Log.i(TAG, "onReceive: Received a gesture dispatch broadcast!")
