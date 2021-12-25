@@ -36,6 +36,8 @@ class InsertSessionIDFragment : Fragment(R.layout.fragment_insert_session_id) {
             binding.errorText.visibility = View.GONE
             binding.pinEntryEditText.isEnabled = false
 
+            binding.connectionStatusText.text = "Checking session ID"
+
             // then we ask the server if this session id exists
             // this utEmit function is an extension function that runs the ack in the ui  thread
             socket.utEmit(SOCKET_CONNECT_SESSION, arrayOf(sessionId)) { ack ->
