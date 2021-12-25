@@ -13,7 +13,10 @@ import android.util.Log
 import android.widget.Toast
 import com.iyxan23.slice.App
 import com.iyxan23.slice.R
+import com.iyxan23.slice.domain.models.response.GenericResponse
 import com.iyxan23.slice.shared.*
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import org.webrtc.*
 
 class RemoteControlService : Service() {
@@ -55,6 +58,33 @@ class RemoteControlService : Service() {
 
         connection = factory
             .createPeerConnection(iceServers, object : LogPeerConnectionObserver(TAG) {
+                override fun onIceGatheringChange(state: PeerConnection.IceGatheringState?) {
+                    super.onIceGatheringChange(state)
+
+                    // check if we've finished gathering ICE candidates
+                    if (state == PeerConnection.IceGatheringState.COMPLETE) {
+                        Log.d(TAG, "onIceGatheringChange: Ice gathering complete! send answer!")
+
+                        // ice candidates gathered! send this answer to the server
+                        socket.emit(SOCKET_SET_ICE, arrayOf(connection.localDescription.description)) {
+                            if (it[0] == null) {
+                                Log.e(TAG, "onCreateSuccess: Invalid ack for set ice: ${it.toList()}")
+                                return@emit
+                            }
+
+                            when (val response = Json.decodeFromString<GenericResponse>(it[0].toString())) {
+                                is GenericResponse.Success -> {
+                                    Log.d(TAG, "onIceGatheringChange: Answer sent!")
+                                }
+
+                                is GenericResponse.Error -> {
+                                    Log.d(TAG, "onIceGatheringChange: Failed to set answer: ${response.message}")
+                                }
+                            }
+                        }
+                    }
+                }
+
                 override fun onDataChannel(channel: DataChannel?) {
                     channel!!
                     Log.d(TAG, "onDataChannel() called with: channel = $channel")
@@ -107,30 +137,17 @@ class RemoteControlService : Service() {
                 // create an answer to the offer and send it out to the server
                 connection.createAnswer(object : CreateSdpObserver {
                     override fun onCreateSuccess(sdp: SessionDescription) {
-                        // success! set as our local description and send that out to the server
+                        // success! now we set this as our local sdp then wait for the ice gathering
+                        // to complete and send the offer to the server
                         Log.d(TAG, "onCreateSuccess() called with: sdp = $sdp")
 
                         connection.setLocalDescription(object : SetSdpObserver {
                             override fun onSetSuccess() {
-                                Log.d(TAG, "onSetSuccess() called, sending answer to the server")
-
-                                socket.utEmit("set ice", arrayOf(sdp.description)) {
-                                    updateNotificationText(
-                                        "Connecting - Answer sent, waiting for a connection from the controller"
-                                    )
-                                }
+                                Log.d(TAG, "onSetSuccess: local sdp set")
                             }
 
                             override fun onSetFailure(p0: String?) {
-                                Log.d(TAG, "onSetFailure() called with: p0 = $p0")
-
-                                Handler(Looper.getMainLooper()).post {
-                                    Toast.makeText(
-                                        this@RemoteControlService,
-                                        "Failed to set answer as local sdp: $p0",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
+                                Log.e(TAG, "onSetFailure: failed to set local sdp: $p0")
                             }
                         }, sdp)
                     }

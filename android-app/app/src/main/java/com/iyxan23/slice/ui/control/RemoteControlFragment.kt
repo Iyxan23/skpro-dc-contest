@@ -24,7 +24,7 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
     private val socket by lazy { (requireActivity().application as App).socket }
     private lateinit var dataChannel: DataChannel
 
-    private lateinit var connection: PeerConnection
+    lateinit var connection: PeerConnection
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,6 +39,32 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
             .createPeerConnectionFactory()
 
         connection = factory.createPeerConnection(iceServers, object : LogPeerConnectionObserver(TAG) {
+            override fun onIceGatheringChange(state: PeerConnection.IceGatheringState?) {
+                super.onIceGatheringChange(state)
+
+                // check if we've finished gathering ICE candidates
+                if (state == PeerConnection.IceGatheringState.COMPLETE) {
+                    Log.d(TAG, "onIceGatheringChange: Ice gathering complete! send offer!")
+                    // ice candidates gathered! send this offer to the server
+                    socket.emit(SOCKET_SET_ICE, arrayOf(connection.localDescription.description)) {
+                        if (it[0] == null) {
+                            Log.e(TAG, "onCreateSuccess: Invalid ack for set ice: ${it.toList()}")
+                            return@emit
+                        }
+
+                        when (val response = Json.decodeFromString<GenericResponse>(it[0].toString())) {
+                            is GenericResponse.Success -> {
+                                Log.d(TAG, "onIceGatheringChange: Offer sent!")
+                            }
+
+                            is GenericResponse.Error -> {
+                                Log.d(TAG, "onIceGatheringChange: Failed to set offer: ${response.message}")
+                            }
+                        }
+                    }
+                }
+            }
+
             override fun onAddStream(stream: MediaStream?) {
                 stream!!
                 super.onAddStream(stream)
@@ -85,41 +111,18 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
         // and finally we will generate the ICE for this device
         connection.createOffer(object : CreateSdpObserver {
             override fun onCreateSuccess(sdp: SessionDescription) {
-                // success! set this as our local description and send that to the server!
-                Log.d(TAG, "onCreateSuccess: offer made: \"${sdp.description}\", setting it as local sdp")
+                // offer made, set this as local sdp and then we wait for the ICE gathering to
+                // complete
+                Log.d(TAG, "onCreateSuccess: offer made: \"${sdp.description}\"")
 
+                // set this as local sdp
                 connection.setLocalDescription(object : SetSdpObserver {
                     override fun onSetSuccess() {
-                        Log.d(TAG, "onSetSuccess: local sdp successfully set! sending it to the server")
-
-                        socket.emit(SOCKET_SET_ICE, arrayOf(sdp.description)) {
-                            if (it[0] == null) {
-                                Log.e(TAG, "onCreateSuccess: Invalid ack for set ice: ${it.toList()}")
-                                return@emit
-                            }
-
-                            when (val response = Json.decodeFromString<GenericResponse>(it[0].toString())) {
-                                GenericResponse.Success -> {
-                                    Log.d(TAG, "onCreateSuccess: success")
-                                }
-
-                                is GenericResponse.Error -> {
-                                    Log.d(TAG, "onCreateSuccess: error: ${response.message}")
-                                }
-                            }
-                        }
+                        Log.d(TAG, "onSetSuccess: local sdp set")
                     }
 
                     override fun onSetFailure(p0: String?) {
-                        Log.d(TAG, "onSetFailure: failed to set: $p0")
-
-                        Handler(Looper.getMainLooper()).post {
-                            Toast.makeText(
-                                requireContext(),
-                                "Failed to set offer as local SDP: $p0",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+                        Log.e(TAG, "onSetFailure: failed to set local sdp: $p0")
                     }
                 }, sdp)
             }
