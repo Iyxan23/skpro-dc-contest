@@ -66,7 +66,7 @@ class RemoteControlService : Service() {
                         Log.d(TAG, "onIceGatheringChange: Ice gathering complete! send answer!")
 
                         // ice candidates gathered! send this answer to the server
-                        socket.emit(SOCKET_SET_ICE, arrayOf(connection.localDescription.description)) {
+                        socket.emit(SOCKET_SET_SDP, arrayOf(connection.localDescription.description)) {
                             if (it[0] == null) {
                                 Log.e(TAG, "onCreateSuccess: Invalid ack for set ice: ${it.toList()}")
                                 return@emit

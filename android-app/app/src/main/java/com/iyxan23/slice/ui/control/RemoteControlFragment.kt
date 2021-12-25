@@ -46,7 +46,7 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
                 if (state == PeerConnection.IceGatheringState.COMPLETE) {
                     Log.d(TAG, "onIceGatheringChange: Ice gathering complete! send offer!")
                     // ice candidates gathered! send this offer to the server
-                    socket.emit(SOCKET_SET_ICE, arrayOf(connection.localDescription.description)) {
+                    socket.emit(SOCKET_SET_SDP, arrayOf(connection.localDescription.description)) {
                         if (it[0] == null) {
                             Log.e(TAG, "onCreateSuccess: Invalid ack for set ice: ${it.toList()}")
                             return@emit
@@ -108,7 +108,7 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
             }
         })
 
-        // and finally we will generate the ICE for this device
+        // and finally we will generate the offer for this device
         connection.createOffer(object : CreateSdpObserver {
             override fun onCreateSuccess(sdp: SessionDescription) {
                 // offer made, set this as local sdp and then we wait for the ICE gathering to
@@ -143,7 +143,7 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
         })
 
         // we will be listening for the other side's ice
-        socket.utOnce(SOCKET_SET_ICE) {
+        socket.utOnce(SOCKET_SET_SDP) {
             if (it[0] == null) {
                 Log.e(TAG, "onCreate: Invalid SET ICE event arg: $it")
 
@@ -158,7 +158,7 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
 
             Log.d(TAG, "onCreate: answer received: ${it[0].toString()}")
 
-            // oke, it[0] is the ICE (answer), set that as a remote description!
+            // oke, it[0] is the answer's sdp, set that as a remote description!
             connection.setRemoteDescription(object : SetSdpObserver {
                 override fun onSetSuccess() {
                     Log.d(TAG, "onSetSuccess: set remote description!")
@@ -185,6 +185,6 @@ class RemoteControlFragment : Fragment(R.layout.fragment_remote_control) {
     override fun onStop() {
         super.onStop()
 
-        socket.off(SOCKET_SET_ICE)
+        socket.off(SOCKET_SET_SDP)
     }
 }

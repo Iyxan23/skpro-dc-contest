@@ -43,9 +43,9 @@ const val SOCKET_CONNECTION_CONFIRMED = "connection confirmed"
 const val SOCKET_CONNECT_SESSION = "connect session"
 
 // an event and emit event for both remote and controller
-// event: dispatched when the other side set their ICE
-// emit: when we want to set our ice
-const val SOCKET_SET_ICE = "set ice"
+// event: dispatched when the other side set their sdp (either answer or offer)
+// emit: when we want to set our sdp (either answer or offer)
+const val SOCKET_SET_SDP = "set sdp"
 
 // STUN and TURN servers
 val iceServers = listOf(

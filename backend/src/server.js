@@ -125,8 +125,8 @@ io.on('connection', socket => {
     socket.to(data.controller_socket_id).emit('connection confirmed')
   })
 
-  // when this socket sets its ice
-  socket.on('set ice', async (ice, ack) => {
+  // when this socket sets its sdp
+  socket.on('set sdp', async (sdp, ack) => {
 
     // find the session id from the room the socket has joined before
     const session_id = find_session_id_from_rooms(socket.rooms)
@@ -144,14 +144,14 @@ io.on('connection', socket => {
       .eq('id', session_id)
     
     if (error) {
-      console.error(`failed to set ice for socket ${socket.id} on session id ${session_id}: ${error}`)
+      console.error(`failed to set sdp for socket ${socket.id} on session id ${session_id}: ${error}`)
       ack({'type': 'error', 'message': error.toString()})
       return
     }
 
-    // check what side are we, then send the ice to the opposite side
+    // check what side are we, then send the sdp to the opposite side
     if (socket.id === data.remote_socket_id) {
-      // this is the remote trying to send the ICE to controller
+      // this is the remote trying to send the sdp answer to controller
       // but first check if the other side has connected to the session yet
       if (!data.controller_socket_id) {
         // nope, they haven't, return an error
@@ -159,13 +159,13 @@ io.on('connection', socket => {
         return
       }
 
-      // cool, they're there, send them the ice!
-      io.sockets.sockets.get(data.controller_socket_id).emit('set ice', ice)
+      // cool, they're there, send them the answer!
+      io.sockets.sockets.get(data.controller_socket_id).emit('set sdp', sdp)
 
     } else if (socket.id === data.controller_socket_id) {
-      // this is the controller trying to send the ICE to the remote
+      // this is the controller trying to send the sdp offer to the remote
       // then send it to them!
-      io.sockets.sockets.get(data.remote_socket_id).emit('set ice', ice)
+      io.sockets.sockets.get(data.remote_socket_id).emit('set sdp', sdp)
 
     } else {
       // ?? what socket is this, its neither the controller nor the remote but its
